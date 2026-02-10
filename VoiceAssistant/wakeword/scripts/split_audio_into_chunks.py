@@ -11,6 +11,8 @@ def main(args):
         chunks = make_chunks(audio, length)
         names = []
         for i, chunk in enumerate(chunks):
+            if len(chunk) < 1000:   # Skip chunks that are too small
+                continue
             _name = file.split("/")[-1]
             name = "{}_{}".format(i, _name)
             wav_path = os.path.join(args.save_path, name)

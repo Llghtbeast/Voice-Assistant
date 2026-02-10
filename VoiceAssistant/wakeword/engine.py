@@ -14,15 +14,36 @@ from threading import Event
 class Listener:
 
     def __init__(self, sample_rate=8000, record_seconds=2):
-        self.chunk = 1024
+        self.chunk = 4096
+        self.FORMAT = pyaudio.paInt16
+        self.channels = 1
         self.sample_rate = sample_rate
         self.record_seconds = record_seconds
         self.p = pyaudio.PyAudio()
-        self.stream = self.p.open(format=pyaudio.paInt16,
-                        channels=1,
+
+        target_input_device_name = 'USB Microphone'
+        target_input_device_id = -1
+        
+        info = self.p.get_host_api_info_by_index(0)
+        numdevices = int(info.get('deviceCount') or 0)
+        for i in range(0, numdevices):
+            print("Device id ", i, ":")
+            for k, v in self.p.get_device_info_by_host_api_device_index(0, i).items():
+                print("    ", k, ":", v)
+            
+            info = self.p.get_device_info_by_index(i)
+            if target_input_device_name.lower() in str(info['name']).lower():
+                target_input_device_id = i
+
+        if target_input_device_id == -1:
+            raise Exception(f'No input device matching target {target_input_device_name}')
+
+        self.stream = self.p.open(format=self.FORMAT,
+                        input_device_index=target_input_device_id,
+                        channels=self.channels,
                         rate=self.sample_rate,
                         input=True,
-                        output=True,
+                        output=False,
                         frames_per_buffer=self.chunk)
 
     def listen(self, queue):
@@ -53,7 +74,7 @@ class WakeWordEngine:
         # set the sample format
         wf.setsampwidth(self.listener.p.get_sample_size(pyaudio.paInt16))
         # set the sample rate
-        wf.setframerate(8000)
+        wf.setframerate(16000)
         # write the frames as bytes
         wf.writeframes(b"".join(waveforms))
         # close the file
@@ -141,7 +162,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="demoing the wakeword engine")
     parser.add_argument('--model_file', type=str, default=None, required=True,
                         help='optimized file to load. use optimize_graph.py')
-    parser.add_argument('--sensitivty', type=int, default=10, required=False,
+    parser.add_argument('--sensitivity', type=int, default=10, required=False,
                         help='lower value is more sensitive to activations')
 
     args = parser.parse_args()

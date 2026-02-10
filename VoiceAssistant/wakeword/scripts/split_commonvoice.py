@@ -18,12 +18,14 @@ def main(args):
         chunks = make_chunks(audio, length)
         names = []
         for i, chunk in enumerate(chunks):
+            if len(chunk) < 1000:   # Skip chunks that are too small
+                continue
             _name = file.split(".")[0] + ".wav"
             name = "{}_{}".format(i, _name)
             wav_path = os.path.join(args.save_path, name)
             chunk.export(wav_path, format="wav")
         return names
-    df.path.apply(lambda x: chunk_and_save(x))
+    df['audio_file'].apply(lambda x: chunk_and_save(x))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="script to split common voice data into chunks")

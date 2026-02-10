@@ -19,7 +19,7 @@ import os
 class Listener:
 
     def __init__(self, args):
-        self.chunk = 1024
+        self.chunk = 4096
         self.FORMAT = pyaudio.paInt16
         self.channels = 1
         self.sample_rate = args.sample_rate
@@ -27,11 +27,29 @@ class Listener:
 
         self.p = pyaudio.PyAudio()
 
+        target_input_device_name = 'USB Microphone'
+        target_input_device_id = -1
+        
+        info = self.p.get_host_api_info_by_index(0)
+        numdevices = int(info.get('deviceCount') or 0)
+        for i in range(0, numdevices):
+            print("Device id ", i, ":")
+            for k, v in self.p.get_device_info_by_host_api_device_index(0, i).items():
+                print("    ", k, ":", v)
+            
+            info = self.p.get_device_info_by_index(i)
+            if target_input_device_name.lower() in str(info['name']).lower():
+                target_input_device_id = i
+
+        if target_input_device_id == -1:
+            raise Exception(f'No input device matching target {target_input_device_name}')
+
         self.stream = self.p.open(format=self.FORMAT,
+                        input_device_index=target_input_device_id,
                         channels=self.channels,
                         rate=self.sample_rate,
                         input=True,
-                        output=True,
+                        output=False,
                         frames_per_buffer=self.chunk)
 
 
@@ -117,7 +135,7 @@ if __name__ == "__main__":
     To record interactively (usually for recording your own wake words N times)
     use --interactive mode.
     ''')
-    parser.add_argument('--sample_rate', type=int, default=8000,
+    parser.add_argument('--sample_rate', type=int, default=16000,
                         help='the sample_rate to record at')
     parser.add_argument('--seconds', type=int, default=None,
                         help='if set to None, then will record forever until keyboard interrupt')
