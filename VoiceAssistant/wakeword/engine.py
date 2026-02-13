@@ -13,7 +13,7 @@ from threading import Event
 
 class Listener:
 
-    def __init__(self, sample_rate=8000, record_seconds=2):
+    def __init__(self, sample_rate=16000, record_seconds=2):
         self.chunk = 4096
         self.FORMAT = pyaudio.paInt16
         self.channels = 1
@@ -23,6 +23,8 @@ class Listener:
 
         target_input_device_name = 'USB Microphone'
         target_input_device_id = -1
+        # target_output_device_name = ''
+        # target_output_device_id = -1
         
         info = self.p.get_host_api_info_by_index(0)
         numdevices = int(info.get('deviceCount') or 0)
@@ -35,11 +37,18 @@ class Listener:
             if target_input_device_name.lower() in str(info['name']).lower():
                 target_input_device_id = i
 
+            # if target_output_device_name.lower() in str(info['name']).lower():
+            #     target_output_device_id = i
+
         if target_input_device_id == -1:
             raise Exception(f'No input device matching target {target_input_device_name}')
+        # if target_output_device_id == -1:
+        #     raise Exception(f'No output device matching target {target_output_device_name}')
 
+        print('Listening on input device', target_input_device_id)
         self.stream = self.p.open(format=self.FORMAT,
                         input_device_index=target_input_device_id,
+                        # output_device_index=target_output_device_id,
                         channels=self.channels,
                         rate=self.sample_rate,
                         input=True,
@@ -61,10 +70,10 @@ class Listener:
 class WakeWordEngine:
 
     def __init__(self, model_file):
-        self.listener = Listener(sample_rate=8000, record_seconds=2)
+        self.listener = Listener(sample_rate=16000, record_seconds=2)
         self.model = torch.jit.load(model_file)
         self.model.eval().to('cpu')  #run on cpu
-        self.featurizer = get_featurizer(sample_rate=8000)
+        self.featurizer = get_featurizer(sample_rate=16000)
         self.audio_q = list()
 
     def save(self, waveforms, fname="wakeword_temp"):
@@ -153,7 +162,7 @@ class DemoAction:
         filename = self.random.choice(self.arnold_mp3)
         try:
             print("playing", filename)
-            self.subprocess.check_output(['play', '-v', '.1', filename])
+            # self.subprocess.check_output(['play', '-v', '.1', filename])
         except Exception as e:
             print(str(e))
 
